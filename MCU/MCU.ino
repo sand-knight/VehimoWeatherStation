@@ -20,8 +20,8 @@ float temp, humi, pres;
 
 TinyGPSPlus gps;
 SoftwareSerial GPSerial(12,13);
-float Latitude , Longitude;
-int year , month , date, hour , minute , second;
+float Latitude , Longitude, oldLatitude, oldLongitude;
+int year , month , day, hour , minutes , seconds , oldMinutes, oldSeconds;
 
 
 
@@ -30,8 +30,8 @@ int year , month , date, hour , minute , second;
 #include <ESP8266WiFi.h>
 
 
-char ssid[] = "Brucewillis'";
-char pass[] = "quiprende!";
+char ssid[] = "Gruppo14";
+char pass[] = "12345678";
 
 
 //------------ HTTP SECTION ----------------------------
@@ -39,6 +39,7 @@ char pass[] = "quiprende!";
 WiFiClient client;
 char serverURL[] = "http://192.168.1.139:80/getSensorValue.php";
 
+bool pendingOperations=false; //<-- are there any tuples saved in memory? To move to FS section
 
 
 //  FUNCTIONS
@@ -57,24 +58,37 @@ void SensorRead() {
 
   //----------------------- COORDINATES
   gps.encode(GPSerial.read());
-  Serial.print("Longitude = ");
+  
+  oldLatitude=Latitude;
+  oldLongitude=Longitude;
+  
+  Latitude=gps.location.lat();
   Longitude=gps.location.lng();
+
+  oldMinutes=minutes;
+  oldSeconds=seconds;
+  
   year=gps.date.year();
+  month=gps.date.month();
+  day=gps.date.day();
+  
+  hour=gps.time.hour();
+  minutes=gps.time.minute();
+  seconds=gps.time.second();
+
 }
 
 //--------------- SEND RESULTS TO SERVER
 void sendToServer(String sensorData){
   HTTPClient http; //un oggetto http
-  if (WiFi.status() != WL_CONNECTED){
-    Serial.println("Ma non c'è internet");
-  }else{
     http.begin(client, serverURL);
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+    
     int httpCode = http.POST(sensorData);
     Serial.print("Server response was ");
     Serial.println(httpCode);
     http.end();
-  }
+  
 }
 
 
@@ -82,43 +96,87 @@ void setup()
 {
   // Debug console
   Serial.begin(9600);
-  Serial.println("Qua ci arrivo");
+  
   
   //GPS Serial
   GPSerial.begin(9600);
 
   //Check temperature sensor
   if (!bme.begin(0x76) ){
-    Serial.println("Fallimento");
+    Serial.println("BME sensor unreachable");
     while(1) delay (1000);
-  } else { //just for racer
+    
+  } else { //just for racer, print BME sensor specs
     bme_temp->printSensorDetails();
     bme_pressure->printSensorDetails();
     bme_humidity->printSensorDetails();
   }
 
 
-  //Let's catch GPS signal!
+  //Let's talk to the GPS sensor!
   while(GPSerial.available()<=0){
-    Serial.println("Waiting for gps");
+    Serial.println("GPS serial unreachable");
+    delay(1000);
   }
 
-  //setup connection TODO chip will work when offline
+  //setup connection
   WiFi.begin(ssid, pass);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.println("In attesa di connessione...");
-  }
-  Serial.println("Connected.");
-  
+    
 }
 
 void loop()
 {
   SensorRead();
-  String sensorData="humidity="+String(humi)+"&temperature="+String(temp)+"&pressure="+String(pres)+"&year="+String(year)+"&longitude="+String(Longitude);
-  Serial.println(sensorData);
-  sendToServer(sensorData);
-  delay(60000);  
+  String latestSensorData="humidity="+String(humi)+
+                          "&temperature="+String(temp)+
+                          "&pressure="+String(pres)+
+                          
+                          "&longitude="+String(Longitude)+
+                          "&latitude="+String(Latitude)+
+
+                          "&year="+String(year)+
+                          "&month="+String(month)+
+                          "&day="+String(day)+
+                          
+                          "&hour="+String(hour)+
+                          "&minute="+String(minutes)+
+                          "&second="+String(seconds);
+  
+  Serial.println(latestSensorData);
+
+  bool enoughSTDistance=true;
+
+  /* Calculate if sqrt(DISTANCE/100 + ELAPSEDSECONDS/300)>=1
+   *  that is to say, either the device has travelled 100 meters, or 5 minutes have elapsed, or else check a quadratic combination of those two conditions
+   */
+  // enoughSTDistance=calculateSTDistance();
+
+  
+  if(WiFi.status() == WL_CONNECTED) {
+    
+    if (enoughSTDistance) sendToServer(latestSensorData);  //TODO check http response so we don't lose tuples
+    /*
+     * check memory and sendToServer old tuples if any
+     * 
+     * popAll();
+     */
+    
+  } else {
+    Serial.println("There is no internet connection. Saving to memory...");
+    /*
+     * SAVE TO MEMORY TODO
+     * 
+     * if (enoughSTDistance) bool esito=push(latestSensorData);  
+     * if (esito) ){
+     *  //everything's fine
+     * } else {
+     *  //we're short on memory, We're going to lose this tuple
+     * }
+     * 
+     */
+  }
+
+   
+  delay(10000); //10 seconds
   
 }
