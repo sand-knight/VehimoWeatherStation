@@ -42,21 +42,24 @@ char serverURL[] = "http://192.168.1.139:80/getSensorValue.php";
 bool pendingOperations=false; //<-- are there any tuples saved in memory? To move to FS section
 
 
-//  FUNCTIONS
+//--------------------------------------------  FUNCTIONS
 
 
-//--------------- GET SENSOR READING ---------------------
+/*
+ * --------------- GET SENSOR READING
+ */
 void SensorRead() {
 
-  //----------------------- CLIMATE
+  // CLIMATE
+  
   temp=bme.readTemperature();
   humi=bme.readHumidity();
   pres=bme.readPressure()/100.0F;
-  Serial.print("temp = ");  // Print the results...
-  Serial.println(temp);  // ...to the serial monitor:
 
 
-  //----------------------- COORDINATES
+
+  // COORDINATES
+  
   gps.encode(GPSerial.read());
   
   oldLatitude=Latitude;
@@ -78,7 +81,9 @@ void SensorRead() {
 
 }
 
-//--------------- SEND RESULTS TO SERVER
+/*
+ * --------------- SEND RESULTS TO SERVER
+ */
 void sendToServer(String sensorData){
   HTTPClient http; //un oggetto http
     http.begin(client, "http://"+WiFi.gatewayIP().toString()+":80/getSensorValue.php");   // TODO http.begin(client, serverURL); for debug purpose, however, it will connect to phone hotspot and forward http requesto to chroot
@@ -91,7 +96,9 @@ void sendToServer(String sensorData){
   
 }
 
-
+/*
+ * -------------- SETUP
+ */
 void setup()
 {
   // Debug console
@@ -124,10 +131,31 @@ void setup()
     
 }
 
+/*
+ * ------------------ LOOP
+ */
 void loop()
 {
   SensorRead();
-  String latestSensorData="humidity="+String(humi)+
+
+  bool enoughSTDistance=true;
+
+  /* Calculate if sqrt(DISTANCE/100 + ELAPSEDSECONDS/300)>=1
+   *  that is to say, either the device has travelled 100 meters, or 5 minutes have elapsed, or else check a quadratic combination of those two conditions
+   */
+  // enoughSTDistance=calculateSTDistance();
+
+   
+   
+   /*
+    * Build the http payload. This assignment should be made
+    * only we're going to make an http request.
+    * However, for testing purposes, we're going to need
+    * its output for debug
+    * 
+    * TODO move into "wifi" if statement
+    */
+   String httpPayload="humidity="+String(humi)+
                           "&temperature="+String(temp)+
                           "&pressure="+String(pres)+
                           
@@ -142,19 +170,17 @@ void loop()
                           "&minute="+String(minutes)+
                           "&second="+String(seconds);
   
-  Serial.println(latestSensorData);
-
-  bool enoughSTDistance=true;
-
-  /* Calculate if sqrt(DISTANCE/100 + ELAPSEDSECONDS/300)>=1
-   *  that is to say, either the device has travelled 100 meters, or 5 minutes have elapsed, or else check a quadratic combination of those two conditions
-   */
-  // enoughSTDistance=calculateSTDistance();
-
+  Serial.println(httpPayload);
   
+  /* 
+   *  If connected, upload data
+   *  else save data for later
+   */
   if(WiFi.status() == WL_CONNECTED) {
+
     
-    if (enoughSTDistance) sendToServer(latestSensorData);  //TODO check http response so we don't lose tuples
+    
+    if (enoughSTDistance) sendToServer(httpPayload);  //TODO check http response so we don't lose tuples
     /*
      * check memory and sendToServer old tuples if any
      * 
@@ -164,13 +190,15 @@ void loop()
   } else {
     Serial.println("There is no internet connection. Saving to memory...");
     /*
-     * SAVE TO MEMORY TODO
+     * TODO SAVE TO MEMORY
      * 
-     * if (enoughSTDistance) bool esito=push(latestSensorData);  
-     * if (esito) ){
-     *  //everything's fine
-     * } else {
-     *  //we're short on memory, We're going to lose this tuple
+     * if (enoughSTDistance) { 
+     *    bool esito=push();  
+     *    if (esito) ){
+     *       //everything's fine
+     *    } else {
+     *       //we're short on memory, We're going to lose this tuple
+     *    }
      * }
      * 
      */
