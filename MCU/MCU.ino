@@ -81,7 +81,7 @@ void SensorRead() {
 //--------------- SEND RESULTS TO SERVER
 void sendToServer(String sensorData){
   HTTPClient http; //un oggetto http
-    http.begin(client, serverURL);
+    http.begin(client, "http://"+WiFi.gatewayIP().toString()+":80/getSensorValue.php");   // TODO http.begin(client, serverURL); for debug purpose, however, it will connect to phone hotspot and forward http requesto to chroot
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
     
     int httpCode = http.POST(sensorData);
