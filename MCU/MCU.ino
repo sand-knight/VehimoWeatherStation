@@ -19,7 +19,7 @@ float temp, humi, pres;
 #include <TinyGPS++.h>
 
 TinyGPSPlus gps;
-SoftwareSerial GPSerial(12,13);
+SoftwareSerial GPSerial(14,12);
 float Latitude , Longitude, oldLatitude, oldLongitude;
 int year , month , day, hour , minutes , seconds , oldMinutes, oldSeconds;
 
@@ -60,9 +60,54 @@ void SensorRead() {
 
   // COORDINATES
   
-  gps.encode(GPSerial.read());
+  /* 
+   * flush data from serial, because while main was waiting,
+   * new (outdated) data must have arrived in serial buffer
+   * GPSerial
+   * 
+   */
+  unsigned long t1=micros(); //debug var
   
-  oldLatitude=Latitude;
+  while (GPSerial.available() > 0) GPSerial.read();
+  
+  unsigned long t2=micros(); //debug var
+  Serial.println("Flushing time: "+String((t2-t1)/1000)+"ms");
+
+
+  /* gps.encode gets one char at a time and 
+   *  returns false until the last char has 
+   *  completed the "whole picture" of NMEA strings
+   *  
+   *  
+   *  So we have to:
+   *  1) assure that there are new chars in buffer
+   *      for tinygps to read, unless we like exceptions
+   *      
+   *      usual inner delay (see code below) 
+   *      iterations: 3 or 4 times
+   *      
+   *  2) repeat until tinygps is satiated
+   *      usual gps.encode iterations: 70±40 times
+   *  
+   *  
+   *  Usual time needed: 600ms±400ms
+   */
+  t1=micros(); int i=0, j=0; //debug vars
+  
+  do{
+    j++;
+    while (GPSerial.available()<=0) { delay(200); i++; }
+  }while (!gps.encode(GPSerial.read()));
+  
+  t2=micros(); //debug var
+  
+  Serial.print("Got out of nested whiles in "+String((t2-t1)/1000)+"ms: ");
+  Serial.println("gps.enconde was false "+String(j-1)+" times, and waited for characters "+String(i)+" times"); 
+  
+  /* 
+   *  now gps data is up to date!
+   */
+  oldLatitude=Latitude; 
   oldLongitude=Longitude;
   
   Latitude=gps.location.lat();
@@ -78,7 +123,7 @@ void SensorRead() {
   hour=gps.time.hour();
   minutes=gps.time.minute();
   seconds=gps.time.second();
-
+    
 }
 
 /*
