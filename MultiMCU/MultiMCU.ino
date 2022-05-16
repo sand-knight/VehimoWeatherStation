@@ -179,16 +179,16 @@ void setup()
 }
 
 bool calculateSTDistance(){
-    double distance=gps.distanceBetween(Latitude, Logitude, oldLatitude, oldLongitude);
-    int elapsedTime=(minute-oldMinute)*60+seconds-oldSeconds;
+    double distance=gps.distanceBetween(Latitude, Longitude, oldLatitude, oldLongitude);
+    int elapsedTime=(minutes-oldMinutes)*60+seconds-oldSeconds;
     if (elapsedTime<0) elapsedTime+=3600;
 
     lastKnownSpeed= ((double)elapsedTime)/distance;
     
 
     double result=sqrt(distance/100.00+( ((double)elapsedTime))/300.00 );
-    System.out.println("sqrt(" distance+"/100+"+elapsedTime+"/300)="+result);
-    sendToServer("distance="+distance+"&elapsed="+elapsedTime+"&result="+result);             // DEBUG
+    Serial.println("sqrt("+String(distance)+"/100+"+String(elapsedTime)+"/300)="+String(result));
+    sendToServer("distance="+String(distance)+"&elapsed="+String(elapsedTime)+"&result="+String(result));             // DEBUG
     return result<1.00;
     
 }
