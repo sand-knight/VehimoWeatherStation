@@ -1,7 +1,8 @@
 #include "LittleFS.h"
 
 float temp, humi, pres;
-int year , month , day, hour , minutes , seconds;
+int year;
+uint8_t month , day, hour , minutes , seconds;
 float Latitude , Longitude;
 
 int tuplesStored, tupleSize;
@@ -10,12 +11,12 @@ void fakeMeasure(){
   temp=random();
   humi=random();
   pres=random();
-  year=random();
-  month=random();
-  day=random();
-  hour=random();
-  minutes=random();
-  seconds=random();
+  year=2022;
+  month=4;
+  day=10;
+  hour=24;
+  minutes=37;
+  seconds=28;
 
           String httpPayload = "humidity=" + String(humi) +
                              "&temperature=" + String(temp) +
@@ -41,58 +42,70 @@ void push(){
   byte i, offset=0;
 
   toWrite=(uint8_t*)&temp;
-  for(i=0; i<sizeof(float); i++){
+  for(i=0; i<sizeof(temp); i++){
     buffer[offset+i]=toWrite[i];
   }
-  offset+=sizeof(float);
+  offset+=sizeof(temp);
 
   toWrite=(uint8_t*)&humi;
-  for(i=0; i<sizeof(float); i++){
-    Serial.println(toWrite[i]);
+  for(i=0; i<sizeof(humi); i++){
     buffer[offset+i]=toWrite[i];
   }
-  offset+=sizeof(float);
+  offset+=sizeof(humi);
 
   toWrite=(uint8_t*)&pres;
-  for(i=0; i<sizeof(float); i++){
+  for(i=0; i<sizeof(pres); i++){
     buffer[offset+i]=toWrite[i];
   }
-  offset+=sizeof(float);
+  offset+=sizeof(pres);
 
   toWrite=(uint8_t*)&Latitude;
-  for(i=0; i<sizeof(float); i++){
+  for(i=0; i<sizeof(Latitude); i++){
     buffer[offset+i]=toWrite[i];
   }
-  offset+=sizeof(float);
+  offset+=sizeof(Latitude);
 
   toWrite=(uint8_t*)&Longitude;
-  for(i=0; i<sizeof(float); i++){
+  for(i=0; i<sizeof(Longitude); i++){
     buffer[offset+i]=toWrite[i];
   }
-  offset+=sizeof(float);
+  offset+=sizeof(Longitude);
+  
+  toWrite=(uint8_t*)&year;
+  for(i=0; i<sizeof(year); i++){
+    buffer[offset+i]=toWrite[i];
+  }
+  offset+=sizeof(year);
 
   toWrite=(uint8_t*)&month;
-  for(i=0; i<sizeof(int); i++){
+  for(i=0; i<sizeof(month); i++){
     buffer[offset+i]=toWrite[i];
   }
-  offset+=sizeof(int);
+  offset+=sizeof(month);
 
   toWrite=(uint8_t*)&day;
-  for(i=0; i<sizeof(int); i++){
+  for(i=0; i<sizeof(day); i++){
     buffer[offset+i]=toWrite[i];
   }
-  offset+=sizeof(int);
+  offset+=sizeof(day);
   
   toWrite=(uint8_t*)&hour;
-  for(i=0; i<sizeof(int); i++){
+  for(i=0; i<sizeof(hour); i++){
     buffer[offset+i]=toWrite[i];
    }
-  offset+=sizeof(int);
+  offset+=sizeof(hour);
   
   toWrite=(uint8_t*)&minutes;
-  for(i=0; i<sizeof(int); i++){
+  for(i=0; i<sizeof(minutes); i++){
     buffer[offset+i]=toWrite[i];
   }
+  offset+=sizeof(minutes);
+
+  toWrite=(uint8_t*)&seconds;
+  for(i=0; i<sizeof(seconds); i++){
+    buffer[offset+i]=toWrite[i];
+  }
+  
 
   for (i=0;i<tupleSize; i++){
     Serial.print(buffer[i]);
@@ -125,6 +138,7 @@ String pop(){
   byte offset=0;
   float* asFloat;
   int* asInt;
+  uint8_t* asByte;
 
   file.seek(tupleSize* (tuplesStored - 1), SeekSet);
 
@@ -148,38 +162,46 @@ String pop(){
 
   asFloat=(float*)&(buffer[offset]);
   String payload= "temperature="+ String(*asFloat);
-  offset+=sizeof(float);
+  offset+=sizeof(temp);
 
   asFloat=(float*)&(buffer[offset]);
   payload+="&humidity="+String(*asFloat);
-  offset+=sizeof(float);
+  offset+=sizeof(humi);
   
   asFloat=(float*)&(buffer[offset]);
   payload+="&pressure="+String(*asFloat);
-  offset+=sizeof(float);
+  offset+=sizeof(pres);
   
   asFloat=(float*)&(buffer[offset]);
   payload+="&Longitude="+String(*asFloat);
-  offset+=sizeof(float);
+  offset+=sizeof(Longitude);
   
   asFloat=(float*)&(buffer[offset]);
   payload+="&Latitude="+String(*asFloat);
-  offset+=sizeof(float);
+  offset+=sizeof(Latitude);
   
   asInt=(int*)&(buffer[offset]);
-  payload+="&month="+String(*asInt);
-  offset+=sizeof(int);
+  payload+="&year="+String(*asInt);
+  offset+=sizeof(year);
 
-  asInt=(int*)&(buffer[offset]);
-  payload+="&day="+String(*asInt);
-  offset+=sizeof(int);
+  asByte=(uint8_t*)&(buffer[offset]);
+  payload+="&month="+String(*asByte);
+  offset+=sizeof(month);
 
-  asInt=(int*)&(buffer[offset]);
-  payload+="&hour="+String(*asInt);
-  offset+=sizeof(int);
+  asByte=(uint8_t*)&(buffer[offset]);
+  payload+="&day="+String(*asByte);
+  offset+=sizeof(day);
 
-  asInt=(int*)&(buffer[offset]);
-  payload+="&minute="+String(*asInt);
+  asByte=(uint8_t*)&(buffer[offset]);
+  payload+="&hour="+String(*asByte);
+  offset+=sizeof(hour);
+
+  asByte=(uint8_t*)&(buffer[offset]);
+  payload+="&minute="+String(*asByte);
+  offset+=sizeof(minutes);
+
+  asByte=(uint8_t*)&(buffer[offset]);
+  payload+="&seconds="+String(*asByte);
 
 
 
@@ -197,7 +219,7 @@ void setup() {
 
 
   tuplesStored=0;
-  tupleSize=5*sizeof(float)+4*sizeof(int);
+  tupleSize=5*sizeof(float)+6*sizeof(int);
 
   File f=LittleFS.open("/tuples", "w");
   f.close();
