@@ -1,0 +1,204 @@
+$ : sudo mysql
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MariaDB connection id is 31
+Server version: 10.6.7-MariaDB-3 Debian buildd-unstable
+
+Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+MariaDB [(none)]> use VehiMoWS
+Database changed
+MariaDB [VehiMoWS]> CREATE TABLE Device_Types(
+    -> Name varchar(64),
+    -> codasjdn
+    -> ;
+ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '' at line 3
+MariaDB [VehiMoWS]> CREATE TABLE Device_Types( Name varchar(64), codename varchar(64) PRIMARY KEY);
+Query OK, 0 rows affected (0.168 sec)
+
+MariaDB [VehiMoWS]> INSERT INTO Device_Types(codename, Name) VALUES ("basic_vehimo1", "Basic");
+Query OK, 1 row affected (0.017 sec)
+
+MariaDB [VehiMoWS]> CREATE TABLE Users(Username varchar(32), Email varchar(64) PRIMARY KEY, password varchar(255)) ENGINE = InnoDB;
+Query OK, 0 rows affected (0.123 sec)
+
+MariaDB [VehiMoWS]> DROP TABLE Users;
+Query OK, 0 rows affected (0.100 sec)
+
+MariaDB [VehiMoWS]> CREATE TABLE Users(Username varchar(32), Email varchar(64) PRIMARY KEY, password varchar(255), salt varchar(16)) ENGINE = InnoDB;
+Query OK, 0 rows affected (0.135 sec)
+
+MariaDB [VehiMoWS]> DROP TABLE Users;
+Query OK, 0 rows affected (0.091 sec)
+
+MariaDB [VehiMoWS]> CREATE TABLE Users(Username varchar(32), Email varchar(64) PRIMARY KEY, password varchar(255)) ENGINE = InnoDB;
+Query OK, 0 rows affected (0.119 sec)
+
+MariaDB [VehiMoWS]> INSERT INTO Users(Username, Email, password) VALUES ("Utente01", "utente01@esempio.it", "$2y$10$iKvI2gvB6KmS04czn3.BL.HF5T4RQ1UyjM1cPC/5e6YxjIHt7b7uK");
+Query OK, 1 row affected (0.039 sec)
+
+MariaDB [VehiMoWS]> CREATE TABLE Registered_Devices(codename varchar(64) NOT NULL, id varchar(255), User varchar(64), FOREIGN KEY(codename) REFERENCES Devcice_Types(codename), FOREIGN KEY (User) REFERENCES Users(Email))
+    -> ;
+ERROR 1005 (HY000): Can't create table `VehiMoWS`.`Registered_Devices` (errno: 150 "Foreign key constraint is incorrectly formed")
+MariaDB [VehiMoWS]> CREATE TABLE Registered_Devices(codename varchar(64) NOT NULL, id varchar(255) NOT NULL, User varchar(64) NOT NULL, FOREIGN KEY (codename) R
+EFERENCES Device_Types(codename), FOREIGN KEY (User) REFERENCES Users(Email));
+Query OK, 0 rows affected (0.159 sec)
+
+MariaDB [VehiMoWS]> INSERT INTO Registered_Devices(User, codename, id) VALUES ("utente01@esempio.it", "basic_vehimo1", "ZX9GP31ZGfKOqYvj/1BjRo2VoeCFhxScGN0cWow0pw7iuZM+PP+V1wV/Dp/qZTUJ
+    "> LhpkeyxeDTSOzRntcK8rfFPl4jXpTwU7qkBRzvkNlFa6TMH/h2PszoKTlKMnYCS6
+    "> 1geXFmH6lQzP5h+/ugEQT7iqwx8WO4pnLyWQoXgqbiw=");
+Query OK, 1 row affected (0.012 sec)
+
+MariaDB [VehiMoWS]> SELECT 
+    -> * FROM Registered_Devices
+    -> ;
++---------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------+
+| codename      | id                                                                                                                                                                             | User                |
++---------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------+
+| basic_vehimo1 | ZX9GP31ZGfKOqYvj/1BjRo2VoeCFhxScGN0cWow0pw7iuZM+PP+V1wV/Dp/qZTUJ
+LhpkeyxeDTSOzRntcK8rfFPl4jXpTwU7qkBRzvkNlFa6TMH/h2PszoKTlKMnYCS6
+1geXFmH6lQzP5h+/ugEQT7iqwx8WO4pnLyWQoXgqbiw= | utente01@esempio.it |
++---------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------+
+1 row in set (0.007 sec)
+
+MariaDB [VehiMoWS]> UPDATE Registered_Devices SET id = "ZX9GP31ZGfKOqYvj/1BjRo2VoeCFhxScGN0cWow0pw7iuZM+PP+V1wV/Dp/qZTUJLhpkeyxeDTSOzRntcK8rfFPl4jXpTwU7qkBRzvkNlFa6TMH/h2PszoKTlKMnYCS61geXFmH6lQzP5h+/ugEQT7iqwx8WO4pnLyWQoXgqbiw=" WHERE User="utente01@esempio.it";
+Query OK, 1 row affected (0.060 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+MariaDB [VehiMoWS]> SELECT  * FROM Registered_Devices;
++---------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------+
+| codename      | id                                                                                                                                                                           | User                |
++---------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------+
+| basic_vehimo1 | ZX9GP31ZGfKOqYvj/1BjRo2VoeCFhxScGN0cWow0pw7iuZM+PP+V1wV/Dp/qZTUJLhpkeyxeDTSOzRntcK8rfFPl4jXpTwU7qkBRzvkNlFa6TMH/h2PszoKTlKMnYCS61geXFmH6lQzP5h+/ugEQT7iqwx8WO4pnLyWQoXgqbiw= | utente01@esempio.it |
++---------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------+
+1 row in set (0.000 sec)
+
+MariaDB [VehiMoWS]> CREATE TABLE Climate(device_id varchar(255), Timestamp DATETIME PRIMARY KEY, Latitude Float(20), Longitude Float(20), Temperature Float(10),
+ Pressure Float(10), Humidity Float(10), FOREIGN KEY device_id REFERENCES Regis
+ered_Devices(id)) ENGINE=InnoDB;
+ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'REFERENCES Registered_Devices(id)) ENGINE=InnoDB' at line 1
+MariaDB [VehiMoWS]> CREATE TABLE Climate(device_id varchar(255), Timestamp DATETIME PRIMARY KEY, Latitude Float(20), Longitude Float(20), Temperature Float(10), Pressure Float(10), Humidity Float(10), FOREIGN KEY (device_id) REFERENCES Registered_Devices(id)) ENGINE=InnoDB;
+ERROR 1005 (HY000): Can't create table `VehiMoWS`.`Climate` (errno: 150 "Foreign key constraint is incorrectly formed")
+MariaDB [VehiMoWS]> CREATE TABLE Climate(device_id varchar(255), Timestamp DATETIME PRIMARY KEY, Latitude Float(20), Longitude Float(20), Temperature Float(10), Pressure Float(10), Humidity Float(10), FOREIGN KEY (device_id) REFERENCES Registered_Devices(id)) ENGINE=InnoDB;
+ERROR 1005 (HY000): Can't create table `VehiMoWS`.`Climate` (errno: 150 "Foreign key constraint is incorrectly formed")
+MariaDB [VehiMoWS]> CREATE TABLE Climate( device_id varchar(255), Timestamp DATETIME PRIMARY KEY, Latitude Float(20), Longitude Float(20), Temperature Float(10), Pressure Float(10), Humidity Float(10), FOREIGN KEY (device_id) REFERENCES Registered_Devices(id)) ENGINE=InnoDB;
+ERROR 1005 (HY000): Can't create table `VehiMoWS`.`Climate` (errno: 150 "Foreign key constraint is incorrectly formed")
+MariaDB [VehiMoWS]> CREATE TABLE Climate( device_id varchar(255), Timestamp DATETIME PRIMARY KEY, Latitude Float(20), Longitude Float(20), Temperature Float(10), Pressure Float(10), Humidity Float(10), FOREIGN KEY (device_id) REFERENCES Registered_Devices(id));
+ERROR 1005 (HY000): Can't create table `VehiMoWS`.`Climate` (errno: 150 "Foreign key constraint is incorrectly formed")
+MariaDB [VehiMoWS]> CREATE TABLE Climate( device varchar(255), Timestamp DATETIME PRIMARY KEY, Latitude Float(20), Longitude Float(20), Temperature Float(10), Pressure Float(10), Humidity Float(10), FOREIGN KEY (device) REFERENCES Registered_Devices(id));
+ERROR 1005 (HY000): Can't create table `VehiMoWS`.`Climate` (errno: 150 "Foreign key constraint is incorrectly formed")
+MariaDB [VehiMoWS]> SELECT * FROM Registered_Devices;
++---------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------+
+| codename      | id                                                                                                                                                                           | User                |
++---------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------+
+| basic_vehimo1 | ZX9GP31ZGfKOqYvj/1BjRo2VoeCFhxScGN0cWow0pw7iuZM+PP+V1wV/Dp/qZTUJLhpkeyxeDTSOzRntcK8rfFPl4jXpTwU7qkBRzvkNlFa6TMH/h2PszoKTlKMnYCS61geXFmH6lQzP5h+/ugEQT7iqwx8WO4pnLyWQoXgqbiw= | utente01@esempio.it |
++---------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------+
+1 row in set (0.000 sec)
+
+MariaDB [VehiMoWS]> DROP TABLE Registered_Devices;
+Query OK, 0 rows affected (0.082 sec)
+
+MariaDB [VehiMoWS]> CREATE TABLE Registered_Devices(codename varchar(64) NOT NULL, id varchar(255) PRIMARY KEY, User varchar(64) NOT NULL, FOREIGN KEY (codename) REFERENCES Device_Types(codename), FOREIGN KEY (User) REFERENCES Users(Email));
+Query OK, 0 rows affected (0.191 sec)
+
+MariaDB [VehiMoWS]> INSERT INTO Registered_Devices(User, id, codename) VALUES ("utente01@esempio.it", "ZX9GP31ZGfKOqYvj/1BjRo2VoeCFhxScGN0cWow0pw7iuZM+PP+V1wV/Dp/qZTUJLhpkeyxeDTSOzRntcK8rfFPl4jXpTwU7qkBRzvkNlFa6TMH/h2PszoKTlKMnYCS61geXFmH6lQzP5h+/ugEQT7iqwx8WO4pnLyWQoXgqbiw=", basic_vehimo01);
+ERROR 1054 (42S22): Unknown column 'basic_vehimo01' in 'field list'
+MariaDB [VehiMoWS]> INSERT INTO Registered_Devices(User, id, codename) VALUES ("utente01@esempio.it", "ZX9GP31ZGfKOqYvj/1BjRo2VoeCFhxScGN0cWow0pw7iuZM+PP+V1wV/Dp/qZTUJLhpkeyxeDTSOzRntcK8rfFPl4jXpTwU7qkBRzvkNlFa6TMH/h2PszoKTlKMnYCS61geXFmH6lQzP5h+/ugEQT7iqwx8WO4pnLyWQoXgqbiw=", "basic_vehimo01");
+ERROR 1452 (23000): Cannot add or update a child row: a foreign key constraint fails (`VehiMoWS`.`Registered_Devices`, CONSTRAINT `Registered_Devices_ibfk_1` FOREIGN KEY (`codename`) REFERENCES `Device_Types` (`codename`))
+MariaDB [VehiMoWS]> INSERT INTO Registered_Devices(User, id, codename) VALUES ("utente01@esempio.it", "ZX9GP31ZGfKOqYvj/1BjRo2VoeCFhxScGN0cWow0pw7iuZM+PP+V1wV/Dp/qZTUJLhpkeyxeDTSOzRntcK8rfFPl4jXpTwU7qkBRzvkNlFa6TMH/h2PszoKTlKMnYCS61geXFmH6lQzP5h+/ugEQT7iqwx8WO4pnLyWQoXgqbiw=", "basic_vehimo1");
+Query OK, 1 row affected (0.014 sec)
+
+MariaDB [VehiMoWS]> CREATE TABLE Climate(device_id varchar(255), Timestamp DATETIME PRIMARY KEY, Latitude Float(20), Longitude Float(20), Temperature Float(10), Pressure Float(10), Humidity Float(10), FOREIGN KEY (device_id) REFERENCES Registered_Devices(id)) ENGINE=InnoDB;
+Query OK, 0 rows affected (0.164 sec)
+
+MariaDB [VehiMoWS]> INSERT INTO Climate(device_id, Timestamp, Latitude, Longitude, Temperature, Pressure, Humidity) VALUES ("ZX9GP31ZGfKOqYvj/1BjRo2VoeCFhxScGN0cWow0pw7iuZM+PP+V1wV/Dp/qZTUJLhpkeyxeDTSOzRntcK8rfFPl4jXpTwU7qkBRzvkNlFa6TMH/h2PszoKTlKMnYCS61geXFmH6lQzP5h+/ugEQT7iqwx8WO4pnLyWQoXgqbiw=", NOW(), 40.9319, 14.2057, 22.2, 1002, 78.2);
+Query OK, 1 row affected (0.040 sec)
+
+MariaDB [VehiMoWS]> SELECT * FROM Climate;
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------+----------+-----------+-------------+----------+----------+
+| device_id                                                                                                                                                                    | Timestamp           | Latitude | Longitude | Temperature | Pressure | Humidity |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------+----------+-----------+-------------+----------+----------+
+| ZX9GP31ZGfKOqYvj/1BjRo2VoeCFhxScGN0cWow0pw7iuZM+PP+V1wV/Dp/qZTUJLhpkeyxeDTSOzRntcK8rfFPl4jXpTwU7qkBRzvkNlFa6TMH/h2PszoKTlKMnYCS61geXFmH6lQzP5h+/ugEQT7iqwx8WO4pnLyWQoXgqbiw= | 2022-06-13 01:38:02 |  40.9319 |   14.2057 |        22.2 |     1002 |     78.2 |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------+----------+-----------+-------------+----------+----------+
+1 row in set (0.000 sec)
+
+MariaDB [VehiMoWS]> SELECT (Timestamp, Latitude, Longitude, Temperature, Pressure, Humidity) FROM Climate WHERE device_id IN (SELECT id FROM Registered_Devices WHERE User="utente01@esempio.it");
+ERROR 1241 (21000): Operand should contain 1 column(s)
+MariaDB [VehiMoWS]> (SELECT id FROM Registered_Devices WHERE User="utente01@esempio.it")
+    -> ;
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| id                                                                                                                                                                           |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| ZX9GP31ZGfKOqYvj/1BjRo2VoeCFhxScGN0cWow0pw7iuZM+PP+V1wV/Dp/qZTUJLhpkeyxeDTSOzRntcK8rfFPl4jXpTwU7qkBRzvkNlFa6TMH/h2PszoKTlKMnYCS61geXFmH6lQzP5h+/ugEQT7iqwx8WO4pnLyWQoXgqbiw= |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+1 row in set (0.021 sec)
+
+MariaDB [VehiMoWS]> SELECT (Timestamp, Latitude, Longitude, Temperature, Pressure, Humidity) FROM Climate WHERE device_id IN (SELECT id FROM Registered_Devices WHERE User="utente01@esempio.it");
+ERROR 1241 (21000): Operand should contain 1 column(s)
+MariaDB [VehiMoWS]> SELECT Timestamp, Latitude, Longitude, Temperature, Pressure, Humidity FROM Climate WHERE device_id IN (SELECT id FROM Registered_Devices WHERE User="utente01@esempio.it");
++---------------------+----------+-----------+-------------+----------+----------+
+| Timestamp           | Latitude | Longitude | Temperature | Pressure | Humidity |
++---------------------+----------+-----------+-------------+----------+----------+
+| 2022-06-13 01:38:02 |  40.9319 |   14.2057 |        22.2 |     1002 |     78.2 |
++---------------------+----------+-----------+-------------+----------+----------+
+1 row in set (0.050 sec)
+
+MariaDB [VehiMoWS]> CREATE USER "webserver"@'localhost' IDENTIFIED BY 'password';
+Query OK, 0 rows affected (0.171 sec)
+
+MariaDB [VehiMoWS]> GRANT INSERT, UPDATE, DELETE, SELECT ON VehiMoWS.* TO "webserver"@"localhost";
+Query OK, 0 rows affected (0.053 sec)
+
+MariaDB [VehiMoWS]> SHOW GRANTS FOR "webserver"@"localhost";
++------------------------------------------------------------------------------------------------------------------+
+| Grants for webserver@localhost                                                                                   |
++------------------------------------------------------------------------------------------------------------------+
+| GRANT USAGE ON *.* TO `webserver`@`localhost` IDENTIFIED BY PASSWORD '*2470C0C06DEE42FD1618BB99005ADCA2EC9D1E19' |
+| GRANT SELECT, INSERT, UPDATE, DELETE ON `VehiMoWS`.* TO `webserver`@`localhost`                                  |
++------------------------------------------------------------------------------------------------------------------+
+2 rows in set (0.012 sec)
+
+MariaDB [VehiMoWS]> GRANT INSERT, UPDATE, DELETE, SELECT ON VehiMoWS.* TO "webserver"@"localhost" IDENTIFIED BY "passwordsicura";
+Query OK, 0 rows affected (0.010 sec)
+
+MariaDB [VehiMoWS]> SHOW GRANTS FOR "webserver"@"localhost";
++------------------------------------------------------------------------------------------------------------------+
+| Grants for webserver@localhost                                                                                   |
++------------------------------------------------------------------------------------------------------------------+
+| GRANT USAGE ON *.* TO `webserver`@`localhost` IDENTIFIED BY PASSWORD '*CAA595C1AD8677B2BFEB31D1BDD3B2B87FFF2D69' |
+| GRANT SELECT, INSERT, UPDATE, DELETE ON `VehiMoWS`.* TO `webserver`@`localhost`                                  |
++------------------------------------------------------------------------------------------------------------------+
+2 rows in set (0.000 sec)
+
+MariaDB [VehiMoWS]> REVOCE ALL ON VehiMoWS.* FROM "webserver"@"localhost";
+ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'REVOCE ALL ON VehiMoWS.* FROM "webserver"@"localhost"' at line 1
+MariaDB [VehiMoWS]> REVOkE ALL ON VehiMoWS.* FROM "webserver"@"localhost";
+Query OK, 0 rows affected (0.030 sec)
+
+MariaDB [VehiMoWS]> SHOW GRANTS FOR "webserver"@"localhost";
++------------------------------------------------------------------------------------------------------------------+
+| Grants for webserver@localhost                                                                                   |
++------------------------------------------------------------------------------------------------------------------+
+| GRANT USAGE ON *.* TO `webserver`@`localhost` IDENTIFIED BY PASSWORD '*CAA595C1AD8677B2BFEB31D1BDD3B2B87FFF2D69' |
++------------------------------------------------------------------------------------------------------------------+
+1 row in set (0.000 sec)
+
+MariaDB [VehiMoWS]> GRANT INSERT, UPDATE, DELETE, SELECT ON VehiMoWS.* TO "webserver"@"localhost" IDENTIFIED BY "passwordsicura";
+Query OK, 0 rows affected (0.012 sec)
+
+MariaDB [VehiMoWS]> SHOW GRANTS FOR "webserver"@"localhost";
++------------------------------------------------------------------------------------------------------------------+
+| Grants for webserver@localhost                                                                                   |
++------------------------------------------------------------------------------------------------------------------+
+| GRANT USAGE ON *.* TO `webserver`@`localhost` IDENTIFIED BY PASSWORD '*CAA595C1AD8677B2BFEB31D1BDD3B2B87FFF2D69' |
+| GRANT SELECT, INSERT, UPDATE, DELETE ON `VehiMoWS`.* TO `webserver`@`localhost`                                  |
++------------------------------------------------------------------------------------------------------------------+
+2 rows in set (0.000 sec)
+
+MariaDB [VehiMoWS]> SET PASSWORD FOR "webserver"@"localhost"="passwordsicura";
+ERROR 1372 (HY000): Password hash should be a 41-digit hexadecimal number
+MariaDB [VehiMoWS]> SET PASSWORD FOR "webserver"@"localhost"=PASSWORD("passwordsicura");
+Query OK, 0 rows affected (0.011 sec)
+
+MariaDB [VehiMoWS]> 
