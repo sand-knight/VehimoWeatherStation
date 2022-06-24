@@ -15,7 +15,7 @@
         ->setUsername("webserver")
         ->setPassword("unapasswordsicura");
  $mqtt->connect($connectionSettings, true);
- $mqtt->subscribe('Climate', function ($topic, $message){
+ $mqtt->subscribe('/Climate', function ($topic, $message){
 	 
     $arr = [];
     $fields=explode('&', $message);

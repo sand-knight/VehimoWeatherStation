@@ -1,8 +1,8 @@
 #include <Scheduler.h>
 
 #define toggleLed() digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN))
-
-//#define VERBOSE 1 
+String device_id="aA03jhN1oqxAooi76XvSzgrVmCbetNvEGd0lwGC4uUr733X0KAc5tWE+62fx4H43nR08Ezo9QaxiE1M9DUI8HY/05qi9599safGJ1gabogL34K6C930Y3ibsjFHgMiLcqQyjAdTlL6wzBM1Gjs0m77JLlzggOlXtXXYHCbC8";
+#define VERBOSE 1 
 
 //----------  TEMPERATURE SENSOR ---------------------
 
@@ -16,7 +16,7 @@ Adafruit_Sensor *bme_pressure = bme.getPressureSensor();
 Adafruit_Sensor *bme_humidity = bme.getHumiditySensor();
 
 
-float temp, humi, pres;
+double temp, humi, pres;
 
 
 //---------- GPS RECEIVER -------------------------------
@@ -25,7 +25,7 @@ float temp, humi, pres;
 
 TinyGPSPlus gps;
 SoftwareSerial GPSerial(14,12);
-float Latitude , Longitude, oldLatitude, oldLongitude;
+double Latitude , Longitude, oldLatitude, oldLongitude;
 int year;
 uint8_t month , day, hour , minutes , seconds , oldMinutes, oldSeconds;
 float lastKnownSpeed;
@@ -42,9 +42,15 @@ char pass[] = "12345678";
 
 //------------ HTTP SECTION ----------------------------
 #include <ESP8266HTTPClient.h>
-WiFiClient client;
+WiFiClient wificlient;
 char serverURL[] = "http://192.168.1.139:80/getSensorValue.php";
 
+//----------------- MQTT --------------------------------
+#include <MQTTPubSubClient_Generic.h>
+
+String brokerURL="vehimo.sytes.net";
+String mqttName;
+int brokerPort=1883;
 
 //------------ FILE STORAGE SECTION ---------------------
 
@@ -88,7 +94,9 @@ void SensorRead() {
   #ifdef VERBOSE
   unsigned long t2;
   t2=micros(); //debug var
-  Serial.println("Flushing time: "+String((t2-t1)/1000)+"ms");
+  String debugString="Flushing time: "+String((t2-t1)/1000)+"ms";
+  Serial.println(debugString);
+  sendToBroker("/Debug", debugString);
   #endif
 
   /* gps.encode gets one char at a time and 
@@ -114,13 +122,13 @@ void SensorRead() {
   t1=micros();
   int i=0, j=0; //debug vars
   #endif
+    
+  digitalWrite(LED_BUILTIN, LOW);//-------------------------------------------------
   
-  toggleLed();
   do{  //wait for chars to arrive
     #ifdef VERBOSE
     j++;
     #endif
-
     while (GPSerial.available()<=0) { 
       delay(200);
       
@@ -128,17 +136,22 @@ void SensorRead() {
         i++;
       #endif
     }
+ }while (!gps.encode(GPSerial.read()));  //until tinygps is satiated  
 
-  //until tinygps is satiated  
-  }while (!gps.encode(GPSerial.read()));
-  toggleLed();
+  digitalWrite(LED_BUILTIN, HIGH); //-------------------------------------------
 
   
+
   #ifdef VERBOSE
   t2=micros();
-  
-  Serial.print("Got out of nested whiles in "+String((t2-t1)/1000)+"ms: ");
-  Serial.println("gps.enconde was false "+String(j-1)+" times, and waited for characters "+String(i)+" times"); 
+  debugString="Got out of nested whiles in "+String((t2-t1)/1000)+"ms: ";
+  Serial.print(debugString);
+  sendToBroker("/Debug", debugString);
+
+  debugString="gps.enconde was false "+String(j-1)+" times, and waited for characters "+String(i)+" times";
+  Serial.println(debugString); 
+  sendToBroker("/Debug", debugString);
+
   #endif
 
   /* 
@@ -167,7 +180,7 @@ void SensorRead() {
 int sendToServer(String payload){
   HTTPClient http; //un oggetto http
   
-  http.begin(client, "http://"+WiFi.gatewayIP().toString()+":80/getSensorValueM.php");   // TODO http.begin(client, serverURL); for debug purpose, however, it will connect to phone hotspot and forward http requesto to chroot
+  http.begin(wificlient, "http://"+WiFi.gatewayIP().toString()+":80/getSensorValueM.php");   // TODO http.begin(wificlient, serverURL); for debug purpose, however, it will connect to phone hotspot and forward http requesto to chroot
   
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
   int httpCode = http.POST(payload);
@@ -175,6 +188,43 @@ int sendToServer(String payload){
   Serial.println(httpCode);
   http.end();
   return httpCode;
+}
+
+/*
+ * ---------------- SEND RESULTS TO BROKER
+
+mqttClient is created in this scope because, in global scope, its behaviour would have
+it retrying after failing a message. Since we want to control every attempt and how
+a message is stored in memory, the object has to be destroyed after any successful or
+failed attempt.
+
+ * @param topic
+ * @param message
+ * @returns true if message is delivered
+ */
+bool sendToBroker(String topic, String message){
+  if( WiFi.status() != WL_CONNECTED) {
+    Serial.println(F("Missing WiFi connection"));
+    return false;
+  }
+  
+  int serverConnection=wificlient.connect(brokerURL, brokerPort);
+  if (serverConnection==0) {
+    Serial.println(F("Connection to server failed"));
+    return false;
+  }
+    
+  MQTTPubSub::PubSubClient<400> mqttClient;
+  mqttClient.begin(wificlient);
+
+  
+  if (!mqttClient.connect(mqttName, "", "")){ // anonymous login
+    Serial.println(F("MQTT server not found"));
+    return false;
+  }
+  bool result=mqttClient.publish(topic, message, false, 0);
+  return result;
+  
 }
 
 /*
@@ -190,6 +240,10 @@ int sendToServer(String payload){
     double distance;
     
     if(Longitude==0.00 && Latitude==0.00){ //exit because most likely gps has not fix
+      Serial.println("Coordinates 0,0");
+      #ifdef VERBOSE
+        sendToBroker("/Debug", "Coordinates were 0,0");
+      #endif
       return false;
       
     } else distance=gps.distanceBetween(Latitude, Longitude, oldLatitude, oldLongitude);
@@ -199,7 +253,10 @@ int sendToServer(String payload){
     if (elapsedTime<0) elapsedTime+=3600; //for example 18:00:10 - 17:59:59 is -59*60+10-59=-3589 which is only valid if we sum the elapsed hour
 
     if(elapsedTime==0){  //avoid division by zero
-      
+      Serial.println(F("elapsedTime=0, avoid division by 0"));
+      #ifdef VERBOSE
+        sendToBroker("/Debug", F("elapsedTime=0, avoid division by 0"));
+      #endif
       return false;
       
     } else lastKnownSpeed = distance/((double)elapsedTime); //might come in handy when on high speed vehicles there's need for shorter delay
@@ -207,12 +264,13 @@ int sendToServer(String payload){
 
     double result=sqrt(distance/100.00+( ((double)elapsedTime))/300.00 ); //remember casts!
 
-    String formulaDebug="sqrt("+String(distance)+"/100+"+String(elapsedTime)+"/300) equals "+String(result);
+    String debugString="sqrt("+String(distance)+"/100+"+String(elapsedTime)+"/300) equals "+String(result);
     
-    Serial.println(formulaDebug);
+    Serial.println(debugString);
     
     #ifdef VERBOSE
-    sendToServer("distanceFormula="+formulaDebug);             // DEBUG
+      //sendToServer("distanceFormula="+debugString);             // DEBUG
+      sendToBroker("/Debug", debugString);
     #endif
    
     if (result>1.00){
@@ -233,14 +291,18 @@ int sendToServer(String payload){
 String pop(){
 
   if(tuplesStored==0){
-    Serial.println("No tuples to pop");
+    Serial.println(F("No tuples to pop"));
+    #ifdef VERBOSE
+      sendToBroker("/Debug", "No tuples to pop");
+    #endif
+
     return "";
   }
 
   
   uint8_t buffer[tupleSize];
   byte offset=0;
-  float* asFloat;
+  double* asFloat;
   int* asInt;
   uint8_t* asByte;
 
@@ -249,7 +311,7 @@ String pop(){
       every tuple in the binary file take exactly this space
       to read last tuple we multiply size of N-1
   */
-  toggleLed(); //---------------------MEMORY OP
+  digitalWrite(LED_BUILTIN, HIGH); //---------------------MEMORY OP
   File file = LittleFS.open("/tuples", "r");
 
   file.seek(tupleSize* (tuplesStored - 1), SeekSet);
@@ -257,12 +319,14 @@ String pop(){
   file.read(buffer, tupleSize);
 
   file.close();
-  toggleLed(); //---------------------/MEMORY OP
+  digitalWrite(LED_BUILTIN, LOW); //---------------------/MEMORY OP
 
   #ifdef VERBOSE
   for (int i=0;i<tupleSize; i++){
     Serial.print(buffer[i]);
     Serial.print(" ");
+
+    sendToBroker("/Debug", String(buffer[i])+" " );
   }
   Serial.println();
   #endif
@@ -275,25 +339,27 @@ String pop(){
    * 3) increase offset to take into account that sizeof(float) bytes are already read
    * 
    */
-  asFloat=(float*)&(buffer[offset]);
-  String payload= "temperature="+ String(*asFloat);
+  String payload="device_id="+device_id;
+  
+  asFloat=(double*)&(buffer[offset]);
+  payload += "&temperature="+ String(*asFloat, 3);
   offset+=sizeof(temp);
 
-  asFloat=(float*)&(buffer[offset]);
-  payload+="&humidity="+String(*asFloat);
+  asFloat=(double*)&(buffer[offset]);
+  payload+="&humidity="+String(*asFloat, 3);
   offset+=sizeof(humi);
   
-  asFloat=(float*)&(buffer[offset]);
-  payload+="&pressure="+String(*asFloat);
+  asFloat=(double*)&(buffer[offset]);
+  payload+="&pressure="+String(*asFloat, 3);
   offset+=sizeof(pres);
   
-  asFloat=(float*)&(buffer[offset]);
-  payload+="&Longitude="+String(*asFloat);
-  offset+=sizeof(Longitude);
-  
-  asFloat=(float*)&(buffer[offset]);
-  payload+="&Latitude="+String(*asFloat);
+  asFloat=(double*)&(buffer[offset]);
+  payload+="&latitude="+String(*asFloat, 6);
   offset+=sizeof(Latitude);
+  
+  asFloat=(double*)&(buffer[offset]);
+  payload+="&longitude="+String(*asFloat, 6);
+  offset+=sizeof(Longitude);
   
   asInt=(int*)&(buffer[offset]);
   payload+="&year="+String(*asInt);
@@ -410,17 +476,19 @@ void push(){
   for (i=0;i<tupleSize; i++){
     Serial.print(buffer[i]);
     Serial.print(" ");
+
+    sendToBroker("/Debug", String(buffer[i])+" " );
   }
   #endif
 
-  toggleLed(); //------------------------ MEMORY OP
+  digitalWrite(LED_BUILTIN, HIGH); //------------------------ MEMORY OP
   File file = LittleFS.open("/tuples", "r+");
   file.seek(tupleSize*tuplesStored, SeekSet);
 
   file.write(buffer, tupleSize);
 
   file.close();
-  toggleLed(); //------------------------/MEMORY OP
+  digitalWrite(LED_BUILTIN, LOW); //------------------------/MEMORY OP
 
   tuplesStored++;
 }
@@ -453,12 +521,13 @@ protected:
         {
 
             if (WiFi.status() == WL_CONNECTED){
-              String httpPayload = "humidity=" + String(humi) +
-                                   "&temperature=" + String(temp) +
-                                   "&pressure=" + String(pres) +
+              String httpPayload = "device_id=" + device_id +
+                                   "&humidity=" + String(humi, 3) +
+                                   "&temperature=" + String(temp, 3) +
+                                   "&pressure=" + String(pres, 3) +
 
-                                   "&longitude=" + String(Longitude) +
-                                   "&latitude=" + String(Latitude) +
+                                   "&longitude=" + String(Longitude, 6) +
+                                   "&latitude=" + String(Latitude, 6) +
 
                                    "&year=" + String(year) +
                                    "&month=" + String(month) +
@@ -470,13 +539,16 @@ protected:
 
               Serial.println(httpPayload);
 
-              int result=sendToServer(httpPayload);
-              if(result != 200) {
+              //int result=sendToServer(httpPayload);
+              //if(result != 200) {
+              bool result=sendToBroker("/Climate", httpPayload);
+              if(!result){
                 push();
-                Serial.println("http response not as expected. Saving to memory...");
+                //Serial.println("http response not as expected. Saving to memory...");
+                Serial.println(F("mqtt publish failed. Saving to memory..."));
               }  
             }else{
-              Serial.println("There is no internet connection. Saving to memory...");
+              Serial.println(F("There is no internet connection. Saving to memory..."));
               push();
             }
 
@@ -506,11 +578,15 @@ protected:
         while(tuplesStored>0){
 
           String httpPayload=pop();
-          int result=sendToServer(httpPayload);
-          if (result==200) {
-            Serial.println("Uploaded old tuple:");
+          //int result=sendToServer(httpPayload);
+          //if (result==200) {
+          bool result=sendToBroker("/Climate", httpPayload);
+          if (result){
+            Serial.println(F("Uploaded old tuple:"));
             Serial.println(httpPayload);
             tuplesStored--;
+          } else {
+            break; // get out of while, connection must be missing
           }
           yield();
         }
@@ -533,54 +609,74 @@ void setup()
   // Debug led
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW); //Set to known state, because we're using a toggle
+
+  //setup connection
+  WiFi.begin(ssid, pass);
+  
+  mqttName=device_id.substring(0, 50);
   
   //GPS Serial
   GPSerial.begin(9600);
 
   //Check temperature sensor
+  digitalWrite(LED_BUILTIN, HIGH);
   if (!bme.begin(0x76) ){
-    toggleLed();
-    Serial.println("BME sensor unreachable");
-    while(1) delay (1000);
+    
+    Serial.println(F("BME sensor unreachable"));
+    sendToBroker("/Debug", "BME sensor unreachable");
+    while(1){
+      delay (1000);
+      toggleLed();
+    }
     
   } else { //just for racer, print BME sensor specs
     bme_temp->printSensorDetails();
     bme_pressure->printSensorDetails();
     bme_humidity->printSensorDetails();
   }
-
-
+  
   //Let's talk to the GPS sensor!
-  toggleLed();
+  Serial.print("GPS:");
   while(GPSerial.available()<=0){
     
     Serial.println("GPS serial unreachable");
-    delay(1000);
-  }
-  toggleLed();
-
-  //setup connection
-  WiFi.begin(ssid, pass);
-
-  if(!LittleFS.begin()){
+    delay(2000);
     toggleLed();
-    Serial.println("Error mounting");
   }
+  
 
 
+
+  digitalWrite(LED_BUILTIN, HIGH);
+  Serial.print(F("Mounting Littlefs: "));
+  if(!LittleFS.begin()){
+    
+    Serial.println(F("Error mounting"));
+    sendToBroker("/Debug", F("Error mounting"));
+    while(1){
+      delay (3000);
+      toggleLed();
+    }
+  }
+  Serial.println("done");
+  
   tuplesStored=0;
-  tupleSize=5*sizeof(float)+6*sizeof(int);
+  tupleSize=5*sizeof(double)+6*sizeof(int);
 
-  toggleLed();
+  
+  Serial.print(F("Emptying file: "));
   File f=LittleFS.open("/tuples", "w"); //empty file
   f.close();
-  toggleLed();
+  Serial.println("done");
+  digitalWrite(LED_BUILTIN, LOW);;
+
 
   Scheduler.start(&memory_task);
   Scheduler.start(&measure_task);
 
   Scheduler.begin();
-    
+  
+  
 }
 
 
