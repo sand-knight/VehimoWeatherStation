@@ -163,7 +163,7 @@ body,h1,h2,h3,h4,h5,h6 {font-family: "Raleway", Arial, Helvetica, sans-serif}
     <div class="w3-col l4 12">
       <h3>About</h3>
       <h6>
-      Our company was born as an University IoT project. After attaing perfect score and gaining international interest, we patented our project, and produced the first propotype here in Aversa, with the help of a fundrising.<br>
+      Our company was born as an University IoT project. After attaining perfect score and gaining international interest, we patented our project, and produced the first propotype here in Aversa, with the help of a fundrising.<br>
       After 30 years of experience, our products reached astonishing quality/price ratios, and rock solid reliability. Our main clients are from USA though.</h6>
     <p>We accept: <i class="fa fa-credit-card w3-large"></i> <i class="fa fa-cc-mastercard w3-large"></i> <i class="fa fa-cc-amex w3-large"></i> <i class="fa fa-cc-cc-visa w3-large"></i><i class="fa fa-cc-paypal w3-large"></i></p>
     </div>
