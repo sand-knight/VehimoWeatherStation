@@ -1,3 +1,7 @@
+<?php
+
+  session_start();
+?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -16,17 +20,17 @@ html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
 <!-- Top container -->
 <div class="w3-bar w3-top w3-black w3-large" style="z-index:4">
   <button class="w3-bar-item w3-button w3-hide-large w3-hover-none w3-hover-text-light-grey" onclick="w3_open();"><i class="fa fa-bars"></i>  Menu</button>
-  <span class="w3-bar-item w3-right">Logo</span>
+  <span class="w3-bar-item w3-right w3-hover-red" onclick=logout() style="cursor:pointer">Logout</span>
 </div>
 
 <!-- Sidebar/menu -->
 <nav class="w3-sidebar w3-collapse w3-white w3-animate-left" style="z-index:3;width:300px;" id="mySidebar"><br>
   <div class="w3-container w3-row">
     <div class="w3-col s4">
-      <img src="/w3images/avatar2.png" class="w3-circle w3-margin-right" style="width:46px">
+      <img src="https://i.imgflip.com/1nuxj5.jpg" class="w3-circle w3-margin-right" style="width:46px">
     </div>
     <div class="w3-col s8 w3-bar">
-      <span>Welcome, <strong>Mike</strong></span><br>
+      <span>Welcome, <strong><?php echo $_SESSION["Username"]; ?></strong></span><br>
 
 <!----------------------------------------------------------------------------------- BAR ITEMS
 	  <a href="#" class="w3-bar-item w3-button"><i class="fa fa-envelope"></i></a>
@@ -42,9 +46,9 @@ html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
   </div>
   <div class="w3-bar-block">
     <a href="#" class="w3-bar-item w3-button w3-padding-16 w3-hide-large w3-dark-grey w3-hover-black" onclick="w3_close()" title="close menu"><i class="fa fa-remove fa-fw"></i>  Close Menu</a>
-    <a href="#" class="w3-bar-item w3-button w3-padding"><i class="fa fa-users fa-fw"></i>  Overview</a>
-    <a href="#" class="w3-bar-item w3-button w3-padding w3-blue"><i class="fa fa-table fa-fw"></i>  Table</a>
-    <a href="#" class="w3-bar-item w3-button w3-padding"><i class="fa fa-map fa-fw"></i>  Map</a>
+    <a href="/dash.php" class="w3-bar-item w3-button w3-padding"><i class="fa fa-users fa-fw"></i>  Overview</a>
+    <a href="/table.php" class="w3-bar-item w3-button w3-padding w3-blue"><i class="fa fa-table fa-fw"></i>  Table</a>
+    <a href="/map.php" class="w3-bar-item w3-button w3-padding"><i class="fa fa-map fa-fw"></i>  Map</a>
     <a href="#" class="w3-bar-item w3-button w3-padding"><i class="fa fa-share fa-fw"></i>  Shared</a>
     <a href="#" class="w3-bar-item w3-button w3-padding"><i class="fa fa-gear fa-fw"></i> Manage Devices</a>
     <a href="#" class="w3-bar-item w3-button w3-padding"><i class="fa fa-bell fa-fw"></i>  Deals</a>
@@ -74,7 +78,10 @@ html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
 
 <?php
 
-
+  if( !isset($_SESSION["Username"]) ){
+    header("Location: /home.php");
+    exit();
+  }
 
   $conn = mysqli_connect("localhost:3306", "webserver", "passwordsicura", "VehiMoWS");
 
@@ -368,6 +375,20 @@ function toggleSelectAll(obj){
   }
 }
 
+function logout(){
+  const form = document.createElement('form');
+    form.method="post";
+    form.action="/home.php";
+
+    const input= document.createElement("input");
+    input.name="Logout";
+    input.value="addio";
+    input.type="hidden";
+
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+}
 </script>
 
 </body>

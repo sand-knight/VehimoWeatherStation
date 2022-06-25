@@ -1,3 +1,56 @@
+<?php
+    session_start();
+    if( !isset($_SESSION["Username"]) ){
+      header("Location: /home.php");
+      exit();
+    }else{
+      $conn = mysqli_connect("localhost:3306", "webserver", "passwordsicura", "VehiMoWS");
+
+      if (!$conn) {
+          echo "died";
+          die("Connessione fallita: " . mysqli_connect_error());
+      }
+
+      $query='SELECT COUNT(Timestamp) as ntuples FROM Climate, Registered_Devices WHERE Climate.device_id=Registered_Devices.id AND Registered_Devices.User="'.$_SESSION["login"].'"';
+      $result=mysqli_query($conn, $query );
+
+
+      if (mysqli_num_rows($result)>0){
+          $row=mysqli_fetch_array($result);
+          $ntuples=$row["ntuples"];
+
+      }else{
+        $adevice="msql error";
+      }
+
+
+      $query='SELECT COUNT(Timestamp) as newtuples FROM Climate, Registered_Devices WHERE Climate.device_id=Registered_Devices.id AND Registered_Devices.User="'.$_SESSION["login"].'" AND Timestamp>CURDATE()';
+      $result=mysqli_query($conn, $query );
+
+
+      if (mysqli_num_rows($result)>0){
+          $row=mysqli_fetch_array($result);
+          $newtuples=$row["newtuples"];
+
+      }else{
+        $adevice="msql error";
+      }
+
+
+      $query='SELECT device_name FROM Registered_Devices WHERE User="'.$_SESSION["login"].'"';
+      $result=mysqli_query($conn, $query );
+
+
+      if (mysqli_num_rows($result)>0){
+          $row=mysqli_fetch_array($result);
+          $adevice=$row["device_name"];
+
+      }else{
+        $adevice="msql error";
+      }
+    }
+?>
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -16,17 +69,17 @@ html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
 <!-- Top container -->
 <div class="w3-bar w3-top w3-black w3-large" style="z-index:4">
   <button class="w3-bar-item w3-button w3-hide-large w3-hover-none w3-hover-text-light-grey" onclick="w3_open();"><i class="fa fa-bars"></i>  Menu</button>
-  <span class="w3-bar-item w3-right">Logo</span>
+  <span class="w3-bar-item w3-right w3-hover-red" onclick=logout() style="cursor:pointer">Logout</span>
 </div>
 
 <!-- Sidebar/menu -->
 <nav class="w3-sidebar w3-collapse w3-white w3-animate-left" style="z-index:3;width:300px;" id="mySidebar"><br>
   <div class="w3-container w3-row">
     <div class="w3-col s4">
-      <img src="/w3images/avatar2.png" class="w3-circle w3-margin-right" style="width:46px">
+      <img src="https://i.imgflip.com/1nuxj5.jpg" class="w3-circle w3-margin-right" style="width:46px">
     </div>
     <div class="w3-col s8 w3-bar">
-      <span>Welcome, <strong>Mike</strong></span><br>
+      <span>Welcome, <strong><?php echo $_SESSION["Username"]; ?> </strong></span><br>
 
 <!----------------------------------------------------------------------------------- BAR ITEMS
 	  <a href="#" class="w3-bar-item w3-button"><i class="fa fa-envelope"></i></a>
@@ -42,9 +95,9 @@ html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
   </div>
   <div class="w3-bar-block">
     <a href="#" class="w3-bar-item w3-button w3-padding-16 w3-hide-large w3-dark-grey w3-hover-black" onclick="w3_close()" title="close menu"><i class="fa fa-remove fa-fw"></i>  Close Menu</a>
-    <a href="#" class="w3-bar-item w3-button w3-padding w3-blue"><i class="fa fa-users fa-fw"></i>  Overview</a>
-    <a href="#" class="w3-bar-item w3-button w3-padding"><i class="fa fa-table fa-fw"></i>  Table</a>
-    <a href="#" class="w3-bar-item w3-button w3-padding"><i class="fa fa-map fa-fw"></i>  Map</a>
+    <a href="/dash.php" class="w3-bar-item w3-button w3-padding w3-blue"><i class="fa fa-users fa-fw"></i>  Overview</a>
+    <a href="/table.php" class="w3-bar-item w3-button w3-padding"><i class="fa fa-table fa-fw"></i>  Table</a>
+    <a href="/map.php" class="w3-bar-item w3-button w3-padding"><i class="fa fa-map fa-fw"></i>  Map</a>
     <a href="#" class="w3-bar-item w3-button w3-padding"><i class="fa fa-share fa-fw"></i>  Shared</a>
     <a href="#" class="w3-bar-item w3-button w3-padding"><i class="fa fa-gear fa-fw"></i> Manage Devices</a>
     <a href="#" class="w3-bar-item w3-button w3-padding"><i class="fa fa-bell fa-fw"></i>  Deals</a>
@@ -66,26 +119,31 @@ html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
 
   <div class="w3-row-padding w3-margin-bottom">
     <div class="w3-quarter">
+      <a href="/table.php" style="text-decoration: none">
       <div class="w3-container w3-red w3-padding-16">
         <div class="w3-left"><i class="fa fa-table w3-xxxlarge"></i></div>
         <div class="w3-right">
-          <h3>52</h3>
+          <h3><?php echo $ntuples; ?></h3>
         </div>
         <div class="w3-clear"></div>
         <h4>View table</h4>
       </div>
+      </a>
     </div>
     <div class="w3-quarter">
+      <a href="/map.php" style="text-decoration: none">
       <div class="w3-container w3-blue w3-padding-16">
         <div class="w3-left"><i class="fa fa-map w3-xxxlarge"></i></div>
         <div class="w3-right">
-          <h3>99</h3>
+          <h3><?php echo $ntuples; ?></h3>
         </div>
         <div class="w3-clear"></div>
         <h4>View on map</h4>
       </div>
+      </a>
     </div>
     <div class="w3-quarter">
+      
       <div class="w3-container w3-teal w3-padding-16">
         <div class="w3-left"><i class="fa fa-share-alt w3-xxxlarge"></i></div>
         <div class="w3-right">
@@ -94,6 +152,7 @@ html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
         <div class="w3-clear"></div>
         <h4>Shares</h4>
       </div>
+      
     </div>
   </div>
 
@@ -101,7 +160,10 @@ html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
     <div class="w3-row-padding" style="margin:0 -16px">
       <div class="w3-quarter">
         <h5>Devices</h5>
+        <div class="w3-display-container">
         <img src="https://sc04.alicdn.com/kf/H18acc56e6be74678a4bcc9de3b75d375R.jpg" style="width:100%" alt="Google Regional Map">
+        <div class="w3-display-bottomleft w3-container"><?php echo $adevice; ?></div>
+        </div>
       </div>
       <div class="w3-threequarter">
         <h5>Feeds</h5>
@@ -109,7 +171,7 @@ html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
           <tr>
             <td><i class="fa fa-user w3-text-blue w3-large"></i></td>
             <td>New records</td>
-            <td><i>10</i></td>
+            <td><i> <?php echo $newtuples; ?></i></td>
           </tr>
           <tr>
             <td><i class="fa fa-bell w3-text-red w3-large"></i></td>
@@ -310,6 +372,21 @@ function w3_open() {
 function w3_close() {
   mySidebar.style.display = "none";
   overlayBg.style.display = "none";
+}
+
+function logout(){
+  const form = document.createElement('form');
+    form.method="post";
+    form.action="/home.php";
+
+    const input= document.createElement("input");
+    input.name="Logout";
+    input.value="addio";
+    input.type="hidden";
+
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
 }
 </script>
 
