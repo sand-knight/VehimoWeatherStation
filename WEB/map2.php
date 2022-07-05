@@ -15,9 +15,13 @@
 <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-<script async
-    src="https://maps.googleapis.com/maps/api/js?key=myApi">
-</script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css"
+   integrity="sha512-hoalWLoI8r4UszCkZ5kL8vayOGVae1oxXe/2A4AO6J9+580uKHDO3JdHb7NzwwzK5xr/Fs0W40kiNHxM9vyTtQ=="
+   crossorigin=""/>
+
+<script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js"
+   integrity="sha512-BB3hKbKWOc9Ez/TAwyWxNXeoV9c1v6FIeYiBieIWkpLjauysF18NzgR1MBNBXf8/KABdlkX68nAhlwcDFLGPCQ=="
+   crossorigin=""></script>
 
 
 <style>
@@ -126,41 +130,20 @@ html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
         
 ?>
 
-    var map;      
-    function initMap(){
-      map = new google.maps.Map(
-        document.getElementById("map"),
-        {
-          zoom: 12,
-          center: {lat: locations[0]["Latitude"], lng: locations[0]["Longitude"]},
-        }
-      );
-
-       var infowindow = new google.maps.InfoWindow();
-       var marker, i;
-
-        for (i = 0; i < locations.length; i++) {  
-        marker = new google.maps.Marker({
-           position: new google.maps.LatLng(locations[i]["Latitude"], locations[i]["Longitude"]),
-           map: map
-         });
-        
-         google.maps.event.addListener(marker, 'click', (function(marker, i) {
-           return function() {
-             infowindow.setContent('<div class="w3-container w3-center"><h6>'+locations[i]["Timestamp"]+'</h6>'+
-                           '<b>'+locations[i]["Measures"]+'</b></div>');
-             infowindow.open(map, marker);
-           }
-         })(marker, i));
-       }
-
+    var map = L.map('map').setView([locations[0]["Latitude"],locations[0]["Longitude"]], 16);      
+    
+    for (i = 0; i < locations.length; i++) {  
+        L.marker([locations[i]["Latitude"], locations[i]["Longitude"]]).addTo(map).bindPopup(
+            '<div class="w3-container w3-center"><h6>'+locations[i]["Timestamp"]+"</h6><br>"+
+            locations[i]["Measures"]+'</div>'
+        );
     }
-    
-    window.initMap = initMap;
 
 
-
-    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
 
   </script>
         

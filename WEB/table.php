@@ -120,7 +120,7 @@ html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
   }
 
     
-  $query='SELECT Timestamp, Latitude, Longitude, Temperature, Pressure, Humidity, device_name as Device, id  FROM Climate, Registered_Devices WHERE Climate.device_id=Registered_Devices.id AND Registered_Devices.User="utente01@esempio.it"';
+  $query='SELECT Timestamp, Latitude, Longitude, Temperature, Pressure, Humidity, device_name as Device, id  FROM Climate, Registered_Devices WHERE Climate.device_id=Registered_Devices.id AND Registered_Devices.User="'.$_SESSION["login"].'"';//  utente01@esempio.it"';
   $result=mysqli_query($conn, $query );
 
 
