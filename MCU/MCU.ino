@@ -89,7 +89,9 @@ void SensorRead() {
   t1=micros(); //debug var
   #endif
 
-  while (GPSerial.available() > 0) GPSerial.read();
+  digitalWrite(LED_BUILTIN, HIGH);
+  while (GPSerial.available() > 0) gps.encode(GPSerial.read());
+  digitalWrite(LED_BUILTIN, LOW);
   
   #ifdef VERBOSE
   unsigned long t2;
@@ -99,66 +101,6 @@ void SensorRead() {
   sendToBroker("/Debug", debugString);
   #endif
 
-  /* gps.encode gets one char at a time and 
-   *  returns false until the last char has 
-   *  completed the "whole picture" of NMEA strings
-   *  
-   *  
-   *  So we have to:
-   *  1) assure that there are new chars in buffer
-   *      for tinygps to read, unless we like exceptions
-   *      
-   *      usual inner delay (see code below) 
-   *      iterations: 3 or 4 times
-   *      
-   *  2) repeat until tinygps is satiated
-   *      usual gps.encode iterations: 70±40 times
-   *  
-   *  
-   *  Usual time needed: 600ms±400ms
-   */
-  
-  #ifdef VERBOSE
-  t1=micros();
-  int i=0, j=0; //debug vars
-  #endif
-    
-  digitalWrite(LED_BUILTIN, LOW);//-------------------------------------------------
-  
-  do{  //wait for chars to arrive
-    #ifdef VERBOSE
-    j++;
-    #endif
-    while (GPSerial.available()<=0) { 
-      delay(200);
-      
-      #ifdef VERBOSE
-        i++;
-      #endif
-    }
- }while (!gps.encode(GPSerial.read()));  //until tinygps is satiated  
-
-  digitalWrite(LED_BUILTIN, HIGH); //-------------------------------------------
-
-  
-
-  #ifdef VERBOSE
-  t2=micros();
-  debugString="Got out of nested whiles in "+String((t2-t1)/1000)+"ms: ";
-  Serial.print(debugString);
-  sendToBroker("/Debug", debugString);
-
-  debugString="gps.enconde was false "+String(j-1)+" times, and waited for characters "+String(i)+" times";
-  Serial.println(debugString); 
-  sendToBroker("/Debug", debugString);
-
-  #endif
-
-  /* 
-   *  now gps data is up to date!
-   */
-
-  
   Latitude=gps.location.lat();
   Longitude=gps.location.lng();
   
@@ -668,7 +610,7 @@ void setup()
   File f=LittleFS.open("/tuples", "w"); //empty file
   f.close();
   Serial.println("done");
-  digitalWrite(LED_BUILTIN, LOW);;
+  digitalWrite(LED_BUILTIN, LOW);
 
 
   Scheduler.start(&memory_task);
